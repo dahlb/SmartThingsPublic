@@ -29,6 +29,7 @@ preferences {
 	    input "humidityBathroom", "capability.relativeHumidityMeasurement", title: "Bathroom Sensor?"
 	    input "humidityHouse", "capability.relativeHumidityMeasurement", title: "Non-Bathroom Sensor?"
 	    input "fan", "capability.switch", title: "Bathroom Fan?"
+        input "threshold", "number", required: true, title: "Relative Humidity Difference To Trigger On?", defaultValue: 10
 	}
 }
 
@@ -54,7 +55,7 @@ def checkHumidity() {
 	log.debug "bathroom humidity: ${humidityBathroom.currentHumidity}"
 	log.debug "non bathroom humidity: ${humidityBathroom.currentHumidity}"
     def differenceInHumidity = humidityBathroom.currentHumidity - humidityBathroom.currentHumidity
-    if (differenceInHumidity > 10) {
+    if (differenceInHumidity > threshold) {
     	fan.on()
     } else {
     	fan.off()
