@@ -30,6 +30,7 @@ preferences {
 	    input "humidityHouse", "capability.relativeHumidityMeasurement", title: "Non-Bathroom Sensor?"
 	    input "fan", "capability.switch", title: "Bathroom Fan?"
         input "threshold", "number", required: true, title: "Relative Humidity Difference To Trigger On?", defaultValue: 10
+        input "offDelay", "number", required: true, title: "How Long to leave fan on?", defaultValue: 35
 	}
 }
 
@@ -42,22 +43,38 @@ def installed() {
 def updated() {
 	log.debug "Updated with settings: ${settings}"
 
-    unschedule(checkHumidity)
+    unschedule()
 	initialize()
 }
 
 def initialize() {
-	checkHumidity()
-	runEvery1Minute(checkHumidity)
+ 	subscribe(humidityBathroom, "humidity", bathroomHumidityChanged)
+    subscribe(fan, "switch.off", fanOff)
+    subscribe(fan, "switch.on", fanOn)
 }
 
-def checkHumidity() {
+def bathroomHumidityChanged(evt) {
 	log.debug "bathroom humidity: ${humidityBathroom.currentHumidity}"
-	log.debug "non bathroom humidity: ${humidityBathroom.currentHumidity}"
-    def differenceInHumidity = humidityBathroom.currentHumidity - humidityBathroom.currentHumidity
+	log.debug "non bathroom humidity: ${humidityHouse.currentHumidity}"
+    def differenceInHumidity = humidityBathroom.currentHumidity - humidityHouse.currentHumidity
+    log.debug "difference is: ${differenceInHumidity}"
     if (differenceInHumidity > threshold) {
+    	log.debug "turning on fan"
     	fan.on()
-    } else {
-    	fan.off()
     }
+}
+
+def fanOn(evt) {
+  log.debug "fan turned on, scheduling turning it off"
+  runIn(offDelay * 60, turnFanOff, [overwrite: true])
+}
+
+def fanOff(evt) {
+  log.debug "fan turned off, canceling scheduling to turn it off"
+  unschedule(turnFanOff)
+}
+
+def turnFanOff() {
+  log.debug "turning fan off"
+  fan.off()
 }
